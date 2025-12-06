@@ -1,4 +1,4 @@
-use std::{collections::HashSet, f32, str::Lines};
+use std::{collections::HashSet, f32, hash::Hash, mem::offset_of, str::Lines};
 
 const FILE_CONTENT: &str = include_str!("./input.txt");
 
@@ -83,10 +83,6 @@ fn sum_invalid_ids(input_range: (ID, ID), only_double_occurances: bool) -> u64 {
     }
 
     println!("\n");
-    // let (range, can_have_invalid_ids) = get_optimized_range(&input_range);
-    // if can_have_invalid_ids == false {
-    //     return 0
-    // }
     let range = input_range.0.value..(input_range.1.value + 1);
 
     // 11 % 11 = 0
@@ -100,27 +96,65 @@ fn sum_invalid_ids(input_range: (ID, ID), only_double_occurances: bool) -> u64 {
         get_size_divisors(input_range.0.num_of_digits)
     };
 
-    let invalid_id_templates: Vec<u64> = size_divisors.iter().map(|&size_divsor| {
-        return compute_invalid_id_templates(input_range.0.num_of_digits, size_divsor);
-    }).collect();
-    println!("Templates: {:?}",  invalid_id_templates);
+    // let invalid_id_templates: Vec<u64> = size_divisors.iter().map(|&size_divsor| {
+    //     return compute_invalid_id_templates(input_range.0.num_of_digits, size_divsor);
+    // }).collect();
+    // println!("Templates: {:?}",  invalid_id_templates);
 
 
     println!("Current range: {:?}", range);
     let mut invalid_ids = HashSet::<u64>::new();
+    // let mut invalid_ids_by_string = HashSet::<u64>::new();
     for id in range {
+        if is_id_invalid_by_string(&id) {
+            invalid_ids.insert(id);
+            println!("Invalid id from string: {}", id);
+        }
 
-        // println!("ID: {}", id);
-        invalid_id_templates.iter().for_each(|invalid_template| {
-            // println!("Template: {}", invalid_template);
-            if id % invalid_template == 0 {
-                println!("Invalid id: {}", id);
-                // println!("Remainder/Template: {}/{}", id % invalid_template, invalid_template);
-                invalid_ids.insert(id);
-            }
-        });
+        // invalid_id_templates.iter().for_each(|invalid_template| {
+        //     if id % invalid_template == 0 {
+        //         println!("Invalid id: {}", id);
+        //         invalid_ids.insert(id);
+        //     }
+        // });
     }
     return invalid_ids.iter().sum();
+}
+
+fn is_id_invalid_by_string(id: &u64) -> bool {
+    let string_id = id.to_string();
+    let id_as_vec: Vec<char> = string_id.chars().collect();
+    let string_len = string_id.chars().count() as u64;
+    let mut repeating_number_lengths = Vec::new();
+    for i in 1..string_len {
+        if string_len % i == 0 {
+            repeating_number_lengths.push(i as u64);
+        }
+    }
+
+    // println!("Current id from string: {}", id);
+    // println!("Number lenghts to check {:?}", repeating_number_lengths.iter());
+    for number_length in repeating_number_lengths {
+        // println!("Checked number length: {}", number_length);
+        let mut is_every_digit_same = true;
+        let number_of_repetitions = string_len / number_length;
+        for digit_position in 0..number_length {
+            let mut nth_digit_values = HashSet::<char>::new();
+            for repetition in 0..number_of_repetitions {
+                let index = (repetition * number_length) + digit_position;
+                // println!("Current checked index: {}", index);
+                nth_digit_values.insert(id_as_vec[index as usize]);
+            }
+            if nth_digit_values.len() > 1 {
+                is_every_digit_same = false;
+                break
+            }
+        }
+        if is_every_digit_same {
+            return true
+        }
+    }
+    return false;
 }
 
 fn get_size_divisors(size: usize) -> HashSet<usize> {
@@ -152,47 +186,4 @@ fn compute_invalid_id_templates(number_size: usize, divisor: usize) -> u64 {
     }
 
     return template as u64;
-}
-
-fn get_optimized_range(input_range: &(ID, ID)) -> (std::ops::Range<u64>, bool) {
-    if input_range.0.num_of_digits == input_range.1.num_of_digits {
-        if is_odd(input_range.0.num_of_digits) {
-            return (0..0, false);
-        }
-        return (input_range.0.value..input_range.1.value + 1, true);
-    } 
-
-    if is_odd(input_range.0.num_of_digits) {
-        let mut bottom_range = 1;
-        let mut bottom_range_second_part = 1;
-        for i in 0..input_range.1.num_of_digits {
-            if is_odd(i) {
-                bottom_range_second_part *=10
-            } 
-            bottom_range *= 10
-        }
-        bottom_range += bottom_range_second_part;
-
-        if bottom_range > input_range.1.value {
-            return (0..0, false)
-        }
-
-        return (bottom_range..input_range.1.value + 1, true);
-    }
-
-    let mut top_range = 1;
-    for _ in 0..input_range.0.num_of_digits {
-        top_range *= 10
-    }
-    top_range -= 1;
-
-    if top_range < input_range.0.value {
-        return (0..0, false)
-    }
-
-    return (input_range.0.value..top_range + 1, true);
-}
-
-fn is_odd(number: usize) -> bool {
-    number % 2 == 1
 }
