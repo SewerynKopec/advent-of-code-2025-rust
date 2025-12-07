@@ -1,4 +1,4 @@
-use std::{collections::HashSet, f32, hash::Hash, mem::offset_of, str::Lines};
+use std::{collections::HashSet, f32, str::Lines};
 
 const FILE_CONTENT: &str = include_str!("./input.txt");
 
@@ -90,11 +90,11 @@ fn sum_invalid_ids(input_range: (ID, ID), only_double_occurances: bool) -> u64 {
     // 123123 % 1001 = 0
     // 121212 % 10101 = 0
 
-    let size_divisors: HashSet<usize> = if only_double_occurances {
-        HashSet::from([2])
-    } else {
-        get_size_divisors(input_range.0.num_of_digits)
-    };
+    // let size_divisors: HashSet<usize> = if only_double_occurances {
+    //     HashSet::from([2])
+    // } else {
+    //     get_size_divisors(input_range.0.num_of_digits)
+    // };
 
     // let invalid_id_templates: Vec<u64> = size_divisors.iter().map(|&size_divsor| {
     //     return compute_invalid_id_templates(input_range.0.num_of_digits, size_divsor);
