@@ -1,6 +1,5 @@
-use std::{collections::{BTreeMap, HashSet}, str::Lines};
+use std::{str::Lines};
 
-use num::iter::Range;
 
 const FILE_CONTENT: &str = include_str!("./input.txt");
 
@@ -71,94 +70,36 @@ fn count_fresh_ingredients(available_ingredients: Vec<i64>, fresh_id_ranges: Vec
 }
 
 fn count_fresh_ids(fresh_id_ranges: Vec<IdRange>) -> i64 {
-    let mut fresh_id_ranges_set = BTreeMap::<i64,i64>::new();
-    for range in fresh_id_ranges {
-        fresh_id_ranges_set.insert(range.first, range.last);
-    }
-    let mut keys = fresh_id_ranges_set.keys().peekable();
-    let mut unique_fresh_id_ranges = BTreeMap::<i64,i64>::new();
+    let mut sorted_ranges: Vec<IdRange> = fresh_id_ranges.clone();
+    sorted_ranges.sort_by(|current, next| current.first.cmp(&next.first));
+    let mut max_value = i64::MIN;
+    let mut sum = 0;
+    let mut iterator = sorted_ranges.iter();
     loop {
-        let &current_key = match keys.next() {
-            Some(x) => {x},
-            None => {break},
-        };
-        let &next_key = match keys.peek() {
-            Some(x) => {*x},
-            None => {
-                unique_fresh_id_ranges.insert(current_key, fresh_id_ranges_set[&current_key]);
-                break
-            },
+        let (first, last) = match iterator.next() {
+            Some(x) => {(x.first, x.last)},
+            None => {break;},
         };
 
-        let value = if fresh_id_ranges_set[&current_key] > next_key {
-            keys.next();
-            fresh_id_ranges_set[&next_key]
-        } else {
-            fresh_id_ranges_set[&current_key]
-        };
-        unique_fresh_id_ranges.insert(current_key, value);
-    }
-    let mut sum = 0;
-    for (first, last) in unique_fresh_id_ranges {
-        let local_sum = last - first + 1;
-        println!("Range: {first}-{last} => {local_sum}");
-        sum += local_sum;
+        // |---------------|
+        //         |------|
+        if last < max_value {
+            continue;
+        }
+
+        // |-----|
+        //         |------|
+        if max_value < first {
+            max_value = last;
+            sum += last - first + 1;
+            continue;
+        }
+
+        // |------------|
+        //          |------------|
+        let moved_start = max_value + 1;
+        sum += last - moved_start + 1;
+        max_value = last;
     }
     return sum
-}
-
-fn count_fresh_ids_old(fresh_id_ranges: Vec<IdRange>) -> i64 {
-    let mut counted_ranges = HashSet::<IdRange>::new();
-    println!("Counting..");
-    for new_range in fresh_id_ranges {
-        let mut ranges_to_remove = HashSet::<IdRange>::new();
-        let mut ranges_to_add = HashSet::<IdRange>::new();
-        println!("New range {}-{}", new_range.first, new_range.last);
-        for &counted_range in &counted_ranges {
-            //no overlap, skip the counted range
-            if new_range.first > counted_range.last || new_range.last < counted_range.first {
-                // println!("No overlap");
-                continue;
-            }
-            println!("Range {}-{}", counted_range.first, counted_range.last);
-            // new range overlaped by counted range, skip the new range
-            if new_range.first > counted_range.first && new_range.last < counted_range.last {
-                println!("New is fully overlapped");
-                break;
-            }
-            // new range fully overlaps the counted range, remove the counted range
-            if new_range.first < counted_range.first && new_range.last > counted_range.last {
-                println!("New fully overlaps");
-                ranges_to_remove.insert(counted_range);
-                continue;
-            }
-            // new range overlaps from left, extend the existing range
-            if new_range.first < counted_range.first {
-                println!("Overlaps front");
-                ranges_to_remove.insert(counted_range);
-                ranges_to_add.insert(IdRange { first: new_range.first, last: counted_range.last });
-                continue;
-            }
-            // new range overlaps from right, extend the existing range
-            if new_range.last > counted_range.last {
-                println!("Overlaps back");
-                ranges_to_remove.insert(counted_range);
-                ranges_to_add.insert(IdRange { first: counted_range.first, last: new_range.last });
-                continue;
-            }
-        }
-        for range_to_remove in ranges_to_remove {
-            counted_ranges.remove(&range_to_remove);
-        }
-        for range_to_add in ranges_to_add {
-            counted_ranges.insert(range_to_add);
-        }
-        counted_ranges.insert(new_range);
-    }
-
-    let mut count = 0_i64;
-    for range in counted_ranges {
-        count += range.last - range.first + 1;
-    }
-    return count;
 }
